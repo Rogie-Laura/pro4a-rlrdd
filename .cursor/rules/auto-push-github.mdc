@@ -1,0 +1,16 @@
+---
+description: Push completed work to GitHub automatically after code changes
+alwaysApply: true
+---
+
+# Auto-push to GitHub
+
+After finishing a task that includes code changes in this repo:
+
+1. Run `git status` and commit any meaningful changes (do not commit secrets).
+2. Push to `origin` on the current branch (`git push origin HEAD`).
+3. Briefly tell the user the commit hash and that Vercel will auto-deploy from GitHub.
+
+Do this without waiting for the user to ask, unless they explicitly say not to push.
+
+Do not force-push. Do not push if there are no changes to commit.
