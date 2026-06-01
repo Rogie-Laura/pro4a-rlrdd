@@ -2,7 +2,13 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { deleteVehicle } from '@/app/actions/vehicles';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { VehicleFormModal } from '@/components/mobility/vehicle-form-modal';
+import { vehicleLabel } from '@/lib/mobility/parse-vehicle-form';
 import type { VehicleRecord } from '@/lib/mobility/types';
+import type { PersonnelLookupOptions } from '@/lib/personnel/lookup-options';
 
 type LimitOption = 50 | 100 | 250 | 500;
 
@@ -14,6 +20,14 @@ type VehicleTableProps = {
   page: number;
   scopeLabel?: string | null;
   fetchError?: string;
+  canManageVehicles?: boolean;
+  lookup?: PersonnelLookupOptions;
+};
+
+type ContextMenuState = {
+  x: number;
+  y: number;
+  record: VehicleRecord;
 };
 
 const LIMIT_OPTIONS: LimitOption[] = [50, 100, 250, 500];
@@ -83,6 +97,23 @@ const limitControlClass =
   'h-8 w-20 rounded-md border border-[var(--app-border)] bg-[var(--app-surface-2)] px-2 text-xs text-[var(--app-text)] outline-none focus:border-emerald-500/50';
 const navButtonClass =
   'inline-flex h-8 min-w-7 items-center justify-center rounded-md border border-[var(--app-border)] bg-[var(--app-surface-2)] px-1.5 text-xs font-medium text-[var(--app-text)] transition hover:bg-[var(--app-hover)] disabled:pointer-events-none disabled:opacity-40';
+const contextMenuClass =
+  'fixed z-[200] min-w-[11rem] overflow-hidden rounded-lg border border-[var(--app-border)] bg-[var(--app-popover)] py-1 shadow-xl';
+const contextMenuItemClass =
+  'flex w-full items-center px-3 py-2 text-left text-xs text-[var(--app-text)] transition hover:bg-[var(--app-hover)] disabled:cursor-not-allowed disabled:opacity-40';
+const contextMenuDangerClass = `${contextMenuItemClass} text-red-600 dark:text-red-300`;
+
+function clampMenuPosition(x: number, y: number) {
+  const menuWidth = 176;
+  const menuHeight = 120;
+  const maxX = Math.max(8, window.innerWidth - menuWidth - 8);
+  const maxY = Math.max(8, window.innerHeight - menuHeight - 8);
+
+  return {
+    x: Math.min(Math.max(8, x), maxX),
+    y: Math.min(Math.max(8, y), maxY),
+  };
+}
 
 function cell(value: string | null | undefined) {
   return value && value.trim() !== '' ? value : '—';
@@ -186,6 +217,8 @@ export function VehicleTable({
   page,
   scopeLabel = null,
   fetchError,
+  canManageVehicles = false,
+  lookup = { ranks: [], offices: [], unitsByOffice: {} },
 }: VehicleTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -193,6 +226,15 @@ export function VehicleTable({
   const [isPending, startTransition] = useTransition();
   const [searchInput, setSearchInput] = useState(search);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const tbodyRef = useRef<HTMLTableSectionElement | null>(null);
+
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [formMode, setFormMode] = useState<'add' | 'edit' | null>(null);
+  const [editRecord, setEditRecord] = useState<VehicleRecord | null>(null);
+  const [deleteRecord, setDeleteRecord] = useState<VehicleRecord | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
+  const [actionMessage, setActionMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const safePage = Math.min(page, totalPages);
@@ -202,6 +244,135 @@ export function VehicleTable({
   useEffect(() => {
     setSearchInput(search);
   }, [search]);
+
+  useEffect(() => {
+    if (!canManageVehicles) {
+      return;
+    }
+
+    const tbody = tbodyRef.current;
+    if (!tbody) {
+      return;
+    }
+
+    const section = tbody;
+
+    function handleContextMenu(event: MouseEvent) {
+      const row = (event.target as HTMLElement).closest<HTMLTableRowElement>('tr[data-vehicle-id]');
+      if (!row || !section.contains(row)) {
+        return;
+      }
+
+      const id = Number.parseInt(row.dataset.vehicleId ?? '', 10);
+      const record = records.find((item) => item.id === id);
+      if (!record) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const position = clampMenuPosition(event.clientX, event.clientY);
+      setContextMenu({
+        x: position.x,
+        y: position.y,
+        record,
+      });
+    }
+
+    tbody.addEventListener('contextmenu', handleContextMenu, true);
+    return () => tbody.removeEventListener('contextmenu', handleContextMenu, true);
+  }, [canManageVehicles, records]);
+
+  useEffect(() => {
+    if (!contextMenu) {
+      return;
+    }
+
+    let removeListeners = () => {};
+    const timer = window.setTimeout(() => {
+      function handlePointerDown(event: MouseEvent) {
+        if (event.button !== 0) {
+          return;
+        }
+
+        if (menuRef.current?.contains(event.target as Node)) {
+          return;
+        }
+
+        setContextMenu(null);
+      }
+
+      function handleEscape(event: KeyboardEvent) {
+        if (event.key === 'Escape') {
+          setContextMenu(null);
+        }
+      }
+
+      function handleScroll() {
+        setContextMenu(null);
+      }
+
+      document.addEventListener('mousedown', handlePointerDown);
+      document.addEventListener('keydown', handleEscape);
+      document.addEventListener('scroll', handleScroll, true);
+
+      removeListeners = () => {
+        document.removeEventListener('mousedown', handlePointerDown);
+        document.removeEventListener('keydown', handleEscape);
+        document.removeEventListener('scroll', handleScroll, true);
+      };
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+      removeListeners();
+    };
+  }, [contextMenu]);
+
+  function refreshList() {
+    startTransition(() => {
+      router.refresh();
+    });
+  }
+
+  function openAddForm() {
+    setContextMenu(null);
+    setEditRecord(null);
+    setFormMode('add');
+  }
+
+  function openEditForm(record: VehicleRecord) {
+    setContextMenu(null);
+    setEditRecord(record);
+    setFormMode('edit');
+  }
+
+  function openDeleteConfirm(record: VehicleRecord) {
+    setContextMenu(null);
+    setDeleteRecord(record);
+  }
+
+  function handleDeleteConfirm() {
+    if (!deleteRecord) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set('id', String(deleteRecord.id));
+    setDeletePending(true);
+
+    startTransition(async () => {
+      const result = await deleteVehicle(formData);
+      setDeletePending(false);
+      setDeleteRecord(null);
+      setActionMessage({ ok: result.ok, text: result.message });
+
+      if (result.ok) {
+        refreshList();
+      }
+    });
+  }
 
   function pushParams(next: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -276,6 +447,24 @@ export function VehicleTable({
         <div className="mb-2 shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200">
           Showing vehicles for: <span className="font-semibold">{scopeLabel}</span>
         </div>
+      ) : null}
+
+      {actionMessage ? (
+        <div
+          className={`mb-2 shrink-0 rounded-md px-3 py-1.5 text-xs ${
+            actionMessage.ok
+              ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200'
+              : 'border border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300'
+          }`}
+        >
+          {actionMessage.text}
+        </div>
+      ) : null}
+
+      {canManageVehicles ? (
+        <p className="mb-2 shrink-0 text-[10px] text-[var(--app-text-muted)]">
+          Right-click a row for vehicle actions.
+        </p>
       ) : null}
 
       <div className="mb-3 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
@@ -375,7 +564,7 @@ export function VehicleTable({
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody ref={tbodyRef}>
             {records.length === 0 ? (
               <tr>
                 <td
@@ -389,7 +578,10 @@ export function VehicleTable({
               records.map((record, index) => (
                 <tr
                   key={record.id}
-                  className="border-b border-[var(--app-border)]/70 transition-colors even:bg-[var(--app-surface-2)]/40 hover:bg-[var(--app-hover)]"
+                  data-vehicle-id={record.id}
+                  className={`border-b border-[var(--app-border)]/70 transition-colors even:bg-[var(--app-surface-2)]/40 hover:bg-[var(--app-hover)]${
+                    canManageVehicles ? ' cursor-context-menu' : ''
+                  }`}
                 >
                   {TABLE_COLUMNS.map(({ key, nowrap }) => (
                     <td
@@ -422,6 +614,63 @@ export function VehicleTable({
           </tbody>
         </table>
       </div>
+
+      {contextMenu && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className={contextMenuClass}
+              style={{ left: contextMenu.x, top: contextMenu.y }}
+              role="menu"
+            >
+              <button type="button" className={contextMenuItemClass} role="menuitem" onClick={openAddForm}>
+                Add New Vehicle
+              </button>
+              <button
+                type="button"
+                className={contextMenuItemClass}
+                role="menuitem"
+                onClick={() => openEditForm(contextMenu.record)}
+              >
+                Edit Vehicle Info
+              </button>
+              <button
+                type="button"
+                className={contextMenuDangerClass}
+                role="menuitem"
+                onClick={() => openDeleteConfirm(contextMenu.record)}
+              >
+                Delete Vehicle
+              </button>
+            </div>,
+            document.body
+          )
+        : null}
+
+      {formMode ? (
+        <VehicleFormModal
+          mode={formMode}
+          record={formMode === 'edit' ? editRecord : null}
+          lookup={lookup}
+          onClose={() => {
+            setFormMode(null);
+            setEditRecord(null);
+          }}
+          onSuccess={refreshList}
+        />
+      ) : null}
+
+      {deleteRecord ? (
+        <ConfirmDialog
+          title="Delete Vehicle"
+          message={`Delete ${vehicleLabel(deleteRecord)}? This cannot be undone.`}
+          confirmLabel="Delete"
+          variant="danger"
+          isPending={deletePending}
+          onCancel={() => setDeleteRecord(null)}
+          onConfirm={handleDeleteConfirm}
+        />
+      ) : null}
     </div>
   );
 }

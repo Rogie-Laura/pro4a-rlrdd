@@ -55,6 +55,10 @@ export function canAccessSystemSettings(role: string | null | undefined): boolea
   return role === 'super_admin' || role === 'RLRDD_admin';
 }
 
+export function canManageVehicles(role: string | null | undefined): boolean {
+  return role === 'super_admin' || role === 'RLRDD_admin';
+}
+
 export function rolesForAccessPage(accessPage: 'RPRMD' | 'RLRDD' | 'BOTH'): RlrddRole[] {
   if (accessPage === 'BOTH') {
     return ['super_admin'];

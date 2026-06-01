@@ -1,7 +1,8 @@
 import { VehicleTable } from '@/components/mobility/vehicle-table';
 import { getVehiclePage } from '@/lib/mobility/fetch-list';
-import { formatVehicleScopeLabel, getVehicleScopeForUser } from '@/lib/auth/roles';
+import { canManageVehicles, formatVehicleScopeLabel, getVehicleScopeForUser } from '@/lib/auth/roles';
 import { requireRlrddAccess } from '@/lib/auth/session';
+import { getPersonnelLookupOptions } from '@/lib/personnel/lookup-options';
 
 const LIMIT_OPTIONS = [50, 100, 250, 500];
 
@@ -21,6 +22,8 @@ export default async function MobilityPage({
 }) {
   const session = await requireRlrddAccess();
   const scope = getVehicleScopeForUser(session.user);
+  const manageVehicles = canManageVehicles(session.user?.role);
+  const lookup = manageVehicles ? await getPersonnelLookupOptions() : null;
 
   const sp = await searchParams;
   const search = pickString(sp.q).trim();
@@ -54,6 +57,8 @@ export default async function MobilityPage({
       page={page}
       scopeLabel={scopeLabel}
       fetchError={data.error}
+      canManageVehicles={manageVehicles}
+      lookup={lookup ?? undefined}
     />
   );
 }
