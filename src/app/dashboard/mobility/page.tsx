@@ -7,9 +7,11 @@ import {
   isScopedVehicleRole,
 } from '@/lib/auth/roles';
 import { requireRlrddAccess } from '@/lib/auth/session';
-import { getPersonnelLookupOptions } from '@/lib/personnel/lookup-options';
+import { getPersonnelLookupOptions, type PersonnelLookupOptions } from '@/lib/personnel/lookup-options';
 
 const LIMIT_OPTIONS = [50, 100, 250, 500];
+
+const EMPTY_LOOKUP: PersonnelLookupOptions = { ranks: [], offices: [], unitsByOffice: {} };
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -29,7 +31,6 @@ export default async function MobilityPage({
   const scope = getVehicleScopeForUser(session.user);
   const deleteVehicles = canDeleteVehicles(session.user?.role);
   const lockOfficeUnit = isScopedVehicleRole(session.user?.role);
-  const lookup = await getPersonnelLookupOptions();
 
   const sp = await searchParams;
   const search = pickString(sp.q).trim();
@@ -43,7 +44,13 @@ export default async function MobilityPage({
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
   const offset = (page - 1) * limit;
 
-  const data = await getVehiclePage({ search, limit, offset, scope });
+  // Scoped logistics users have office/unit locked, so they never need the
+  // (heavier) office/unit lookup. Only admins choose them. Run the vehicle
+  // fetch and lookup in parallel to avoid waterfalling two round-trips.
+  const [data, lookup] = await Promise.all([
+    getVehiclePage({ search, limit, offset, scope }),
+    lockOfficeUnit ? Promise.resolve(EMPTY_LOOKUP) : getPersonnelLookupOptions(),
+  ]);
 
   const scopeLabel =
     data.error
