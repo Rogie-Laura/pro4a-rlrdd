@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { createVehicle, updateVehicle, type VehicleActionResult } from '@/app/actions/vehicles';
 import { Modal } from '@/components/ui/modal';
+import { RLRDD_OFFICES } from '@/lib/mobility/office-list';
 import type { VehicleRecord } from '@/lib/mobility/types';
 import {
   unitsForOffice,
@@ -98,8 +99,8 @@ export function VehicleFormModal({
   }, [record, mode, defaultOffice, defaultUnit]);
 
   const officeOptions = useMemo(
-    () => withCurrentOption(lookup.offices, office),
-    [lookup.offices, office]
+    () => withCurrentOption(RLRDD_OFFICES, office),
+    [office]
   );
   const unitOptions = useMemo(
     () => unitsForOffice(lookup, office, unit),
@@ -182,21 +183,22 @@ export function VehicleFormModal({
             <label htmlFor="vehicle-unit" className={labelClass}>
               Unit
             </label>
-            <select
+            <input
               id="vehicle-unit"
               name="unit"
+              type="text"
+              list="vehicle-unit-options"
               value={unit}
               onChange={(event) => setUnit(event.target.value)}
-              disabled={lockOfficeUnit || !office}
+              disabled={lockOfficeUnit}
+              placeholder="Type or select unit..."
               className={inputClass}
-            >
-              <option value="">{office ? 'Select unit...' : 'Select office first'}</option>
+            />
+            <datalist id="vehicle-unit-options">
               {unitOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
+                <option key={option} value={option} />
               ))}
-            </select>
+            </datalist>
           </div>
         </div>
 
