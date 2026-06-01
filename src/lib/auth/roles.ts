@@ -59,6 +59,11 @@ export function canManageVehicles(role: string | null | undefined): boolean {
   return role === 'super_admin' || role === 'RLRDD_admin';
 }
 
+/** Only admins may delete vehicles from the context menu. */
+export function canDeleteVehicles(role: string | null | undefined): boolean {
+  return canManageVehicles(role);
+}
+
 export function rolesForAccessPage(accessPage: 'RPRMD' | 'RLRDD' | 'BOTH'): RlrddRole[] {
   if (accessPage === 'BOTH') {
     return ['super_admin'];

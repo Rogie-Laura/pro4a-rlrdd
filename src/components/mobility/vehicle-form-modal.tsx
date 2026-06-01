@@ -14,6 +14,9 @@ type VehicleFormModalProps = {
   mode: 'add' | 'edit';
   record?: VehicleRecord | null;
   lookup: PersonnelLookupOptions;
+  defaultOffice?: string | null;
+  defaultUnit?: string | null;
+  lockOfficeUnit?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 };
@@ -77,19 +80,22 @@ export function VehicleFormModal({
   mode,
   record,
   lookup,
+  defaultOffice = '',
+  defaultUnit = '',
+  lockOfficeUnit = false,
   onClose,
   onSuccess,
 }: VehicleFormModalProps) {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<VehicleActionResult | null>(null);
-  const [office, setOffice] = useState(record?.office ?? '');
-  const [unit, setUnit] = useState(record?.unit ?? '');
+  const [office, setOffice] = useState(record?.office ?? defaultOffice ?? '');
+  const [unit, setUnit] = useState(record?.unit ?? defaultUnit ?? '');
 
   useEffect(() => {
-    setOffice(record?.office ?? '');
-    setUnit(record?.unit ?? '');
+    setOffice(record?.office ?? defaultOffice ?? '');
+    setUnit(record?.unit ?? defaultUnit ?? '');
     setResult(null);
-  }, [record, mode]);
+  }, [record, mode, defaultOffice, defaultUnit]);
 
   const officeOptions = useMemo(
     () => withCurrentOption(lookup.offices, office),
@@ -160,6 +166,7 @@ export function VehicleFormModal({
                 setOffice(event.target.value);
                 setUnit('');
               }}
+              disabled={lockOfficeUnit}
               className={inputClass}
             >
               <option value="">Select office...</option>
@@ -180,7 +187,7 @@ export function VehicleFormModal({
               name="unit"
               value={unit}
               onChange={(event) => setUnit(event.target.value)}
-              disabled={!office}
+              disabled={lockOfficeUnit || !office}
               className={inputClass}
             >
               <option value="">{office ? 'Select unit...' : 'Select office first'}</option>

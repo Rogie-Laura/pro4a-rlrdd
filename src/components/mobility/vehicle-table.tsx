@@ -20,14 +20,17 @@ type VehicleTableProps = {
   page: number;
   scopeLabel?: string | null;
   fetchError?: string;
-  canManageVehicles?: boolean;
+  canDeleteVehicles?: boolean;
+  defaultOffice?: string | null;
+  defaultUnit?: string | null;
+  lockOfficeUnit?: boolean;
   lookup?: PersonnelLookupOptions;
 };
 
 type ContextMenuState = {
   x: number;
   y: number;
-  record: VehicleRecord;
+  record: VehicleRecord | null;
 };
 
 const LIMIT_OPTIONS: LimitOption[] = [50, 100, 250, 500];
@@ -103,9 +106,9 @@ const contextMenuItemClass =
   'flex w-full items-center px-3 py-2 text-left text-xs text-[var(--app-text)] transition hover:bg-[var(--app-hover)] disabled:cursor-not-allowed disabled:opacity-40';
 const contextMenuDangerClass = `${contextMenuItemClass} text-red-600 dark:text-red-300`;
 
-function clampMenuPosition(x: number, y: number) {
+function clampMenuPosition(x: number, y: number, showDelete: boolean) {
   const menuWidth = 176;
-  const menuHeight = 120;
+  const menuHeight = showDelete ? 120 : 88;
   const maxX = Math.max(8, window.innerWidth - menuWidth - 8);
   const maxY = Math.max(8, window.innerHeight - menuHeight - 8);
 
@@ -217,7 +220,10 @@ export function VehicleTable({
   page,
   scopeLabel = null,
   fetchError,
-  canManageVehicles = false,
+  canDeleteVehicles = false,
+  defaultOffice = '',
+  defaultUnit = '',
+  lockOfficeUnit = false,
   lookup = { ranks: [], offices: [], unitsByOffice: {} },
 }: VehicleTableProps) {
   const router = useRouter();
@@ -246,10 +252,6 @@ export function VehicleTable({
   }, [search]);
 
   useEffect(() => {
-    if (!canManageVehicles) {
-      return;
-    }
-
     const tbody = tbodyRef.current;
     if (!tbody) {
       return;
@@ -258,21 +260,22 @@ export function VehicleTable({
     const section = tbody;
 
     function handleContextMenu(event: MouseEvent) {
-      const row = (event.target as HTMLElement).closest<HTMLTableRowElement>('tr[data-vehicle-id]');
-      if (!row || !section.contains(row)) {
-        return;
-      }
-
-      const id = Number.parseInt(row.dataset.vehicleId ?? '', 10);
-      const record = records.find((item) => item.id === id);
-      if (!record) {
+      if (!section.contains(event.target as Node)) {
         return;
       }
 
       event.preventDefault();
       event.stopPropagation();
 
-      const position = clampMenuPosition(event.clientX, event.clientY);
+      const row = (event.target as HTMLElement).closest<HTMLTableRowElement>('tr[data-vehicle-id]');
+      let record: VehicleRecord | null = null;
+
+      if (row && section.contains(row)) {
+        const id = Number.parseInt(row.dataset.vehicleId ?? '', 10);
+        record = records.find((item) => item.id === id) ?? null;
+      }
+
+      const position = clampMenuPosition(event.clientX, event.clientY, canDeleteVehicles);
       setContextMenu({
         x: position.x,
         y: position.y,
@@ -282,7 +285,7 @@ export function VehicleTable({
 
     tbody.addEventListener('contextmenu', handleContextMenu, true);
     return () => tbody.removeEventListener('contextmenu', handleContextMenu, true);
-  }, [canManageVehicles, records]);
+  }, [canDeleteVehicles, records]);
 
   useEffect(() => {
     if (!contextMenu) {
@@ -461,11 +464,9 @@ export function VehicleTable({
         </div>
       ) : null}
 
-      {canManageVehicles ? (
-        <p className="mb-2 shrink-0 text-[10px] text-[var(--app-text-muted)]">
-          Right-click a row for vehicle actions.
-        </p>
-      ) : null}
+      <p className="mb-2 shrink-0 text-[10px] text-[var(--app-text-muted)]">
+        Right-click the table to add a vehicle{records.length > 0 ? ', or a row to edit.' : '.'}
+      </p>
 
       <div className="mb-3 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
         <ToolbarField label="Search:">
@@ -564,12 +565,12 @@ export function VehicleTable({
               ))}
             </tr>
           </thead>
-          <tbody ref={tbodyRef}>
+          <tbody ref={tbodyRef} className="cursor-context-menu">
             {records.length === 0 ? (
               <tr>
                 <td
                   colSpan={TABLE_COLUMNS.length}
-                  className="px-3 py-12 text-center text-sm text-[var(--app-text-muted)]"
+                  className="min-h-[12rem] px-3 py-12 text-center text-sm text-[var(--app-text-muted)]"
                 >
                   {fetchError ? 'Unable to load vehicle records.' : 'No vehicle records found.'}
                 </td>
@@ -579,9 +580,7 @@ export function VehicleTable({
                 <tr
                   key={record.id}
                   data-vehicle-id={record.id}
-                  className={`border-b border-[var(--app-border)]/70 transition-colors even:bg-[var(--app-surface-2)]/40 hover:bg-[var(--app-hover)]${
-                    canManageVehicles ? ' cursor-context-menu' : ''
-                  }`}
+                  className="border-b border-[var(--app-border)]/70 transition-colors even:bg-[var(--app-surface-2)]/40 hover:bg-[var(--app-hover)]"
                 >
                   {TABLE_COLUMNS.map(({ key, nowrap }) => (
                     <td
@@ -630,18 +629,22 @@ export function VehicleTable({
                 type="button"
                 className={contextMenuItemClass}
                 role="menuitem"
-                onClick={() => openEditForm(contextMenu.record)}
+                disabled={!contextMenu.record}
+                onClick={() => contextMenu.record && openEditForm(contextMenu.record)}
               >
                 Edit Vehicle Info
               </button>
-              <button
-                type="button"
-                className={contextMenuDangerClass}
-                role="menuitem"
-                onClick={() => openDeleteConfirm(contextMenu.record)}
-              >
-                Delete Vehicle
-              </button>
+              {canDeleteVehicles ? (
+                <button
+                  type="button"
+                  className={contextMenuDangerClass}
+                  role="menuitem"
+                  disabled={!contextMenu.record}
+                  onClick={() => contextMenu.record && openDeleteConfirm(contextMenu.record)}
+                >
+                  Delete Vehicle
+                </button>
+              ) : null}
             </div>,
             document.body
           )
@@ -652,6 +655,9 @@ export function VehicleTable({
           mode={formMode}
           record={formMode === 'edit' ? editRecord : null}
           lookup={lookup}
+          defaultOffice={defaultOffice}
+          defaultUnit={defaultUnit}
+          lockOfficeUnit={lockOfficeUnit}
           onClose={() => {
             setFormMode(null);
             setEditRecord(null);

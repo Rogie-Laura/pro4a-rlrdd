@@ -1,6 +1,11 @@
 import { VehicleTable } from '@/components/mobility/vehicle-table';
 import { getVehiclePage } from '@/lib/mobility/fetch-list';
-import { canManageVehicles, formatVehicleScopeLabel, getVehicleScopeForUser } from '@/lib/auth/roles';
+import {
+  canDeleteVehicles,
+  formatVehicleScopeLabel,
+  getVehicleScopeForUser,
+  isScopedVehicleRole,
+} from '@/lib/auth/roles';
 import { requireRlrddAccess } from '@/lib/auth/session';
 import { getPersonnelLookupOptions } from '@/lib/personnel/lookup-options';
 
@@ -22,8 +27,9 @@ export default async function MobilityPage({
 }) {
   const session = await requireRlrddAccess();
   const scope = getVehicleScopeForUser(session.user);
-  const manageVehicles = canManageVehicles(session.user?.role);
-  const lookup = manageVehicles ? await getPersonnelLookupOptions() : null;
+  const deleteVehicles = canDeleteVehicles(session.user?.role);
+  const lockOfficeUnit = isScopedVehicleRole(session.user?.role);
+  const lookup = await getPersonnelLookupOptions();
 
   const sp = await searchParams;
   const search = pickString(sp.q).trim();
@@ -57,8 +63,11 @@ export default async function MobilityPage({
       page={page}
       scopeLabel={scopeLabel}
       fetchError={data.error}
-      canManageVehicles={manageVehicles}
-      lookup={lookup ?? undefined}
+      canDeleteVehicles={deleteVehicles}
+      defaultOffice={scope?.office ?? session.user?.office}
+      defaultUnit={scope?.unit ?? session.user?.unit}
+      lockOfficeUnit={lockOfficeUnit}
+      lookup={lookup}
     />
   );
 }
