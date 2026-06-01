@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import { cache } from 'react';
 import { SESSION_COOKIE } from '@/lib/auth/constants';
 import type { AccessPage } from '@/lib/auth/access-page';
-import { canSignInToRlrdd } from '@/lib/auth/access-page';
 import { canAccessRlrdd, canAccessSystemSettings, canManageUsers, type RlrddRole } from '@/lib/auth/roles';
 import { createClient } from '@/lib/supabase/server';
 
@@ -74,7 +73,7 @@ export async function requireUserManagementAccess() {
   const session = await requireRlrddAccess();
 
   if (!canManageUsers(session.user?.role)) {
-    redirect('/dashboard');
+    redirect('/dashboard/mobility');
   }
 
   return session;
@@ -84,7 +83,7 @@ export async function requireSystemSettingsAccess() {
   const session = await requireRlrddAccess();
 
   if (!canAccessSystemSettings(session.user?.role)) {
-    redirect('/dashboard');
+    redirect('/dashboard/mobility');
   }
 
   return session;

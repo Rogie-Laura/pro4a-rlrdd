@@ -11,11 +11,14 @@ Uses the **same Supabase database** as [pro4a-rprmd](../pro4a-rprmd) with its ow
    cp ../pro4a-rprmd/.env.local .env.local
    ```
 
-2. Run SQL in Supabase SQL Editor:
+2. Run SQL in Supabase SQL Editor (in order):
 
    ```
    sql/001_rlrdd_auth.sql
+   sql/003_rlrdd_logistics_roles.sql
    ```
+
+   If `access_page` is not set up yet, also run `../pro4a-rprmd/sql/019_users_access_page.sql` first.
 
 3. Install and run (port **3001** so RPRMD can stay on 3000):
 
@@ -49,9 +52,10 @@ To free port 3000: `taskkill /PID 4044 /F` (replace PID from the error).
 | Role | Can sign in |
 |------|-------------|
 | `super_admin` | Yes (shared bootstrap account) |
-| `rlrdd_admin` | Yes |
-| `rlrdd_officer` | Yes |
-| `rlrdd_staff` | Yes |
+| `RLRDD_admin` | Yes |
+| `stn_logistics` | Yes |
+| `phq_logistics` | Yes |
+| `rhq_logistics` | Yes |
 | RPRMD-only roles | No |
 
 Bootstrap: badge `226609`, password `111111` (if `super_admin` in DB).

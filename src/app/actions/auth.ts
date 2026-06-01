@@ -77,7 +77,7 @@ export async function loginWithBadge(formData: FormData): Promise<LoginResult> {
     return { ok: false, message: 'Login service unavailable. Check Supabase connection.' };
   }
 
-  redirect('/dashboard');
+  redirect('/dashboard/mobility');
 }
 
 export async function logoutUser() {

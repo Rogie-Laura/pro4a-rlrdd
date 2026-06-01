@@ -7,7 +7,7 @@ export default async function HomePage() {
   const session = await getSessionUser();
 
   if (session.userId && session.user && canSignInToRlrdd(session.user.access_page) && canAccessRlrdd(session.user)) {
-    redirect('/dashboard');
+    redirect('/dashboard/mobility');
   }
 
   redirect('/login');

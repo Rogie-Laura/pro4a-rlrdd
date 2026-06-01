@@ -10,9 +10,10 @@ alter table public.users add constraint users_role_check check (
     'rhq_admin',
     'RPRMD_admin',
     'super_admin',
-    'rlrdd_admin',
-    'rlrdd_officer',
-    'rlrdd_staff'
+    'RLRDD_admin',
+    'stn_logistics',
+    'phq_logistics',
+    'rhq_logistics'
   )
 );
 
