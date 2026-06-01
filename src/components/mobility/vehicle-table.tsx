@@ -9,7 +9,6 @@ import { VehicleFormModal } from '@/components/mobility/vehicle-form-modal';
 import { vehicleLabel } from '@/lib/mobility/parse-vehicle-form';
 import { EditIcon, PlusIcon, TrashIcon } from '@/components/dashboard/nav-icons';
 import type { VehicleRecord } from '@/lib/mobility/types';
-import type { PersonnelLookupOptions } from '@/lib/personnel/lookup-options';
 
 type LimitOption = 50 | 100 | 250 | 500;
 
@@ -25,7 +24,6 @@ type VehicleTableProps = {
   defaultOffice?: string | null;
   defaultUnit?: string | null;
   lockOfficeUnit?: boolean;
-  lookup?: PersonnelLookupOptions;
 };
 
 type ContextMenuState = {
@@ -226,7 +224,6 @@ export function VehicleTable({
   defaultOffice = '',
   defaultUnit = '',
   lockOfficeUnit = false,
-  lookup = { ranks: [], offices: [], unitsByOffice: {} },
 }: VehicleTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -659,7 +656,6 @@ export function VehicleTable({
         <VehicleFormModal
           mode={formMode}
           record={formMode === 'edit' ? editRecord : null}
-          lookup={lookup}
           defaultOffice={defaultOffice}
           defaultUnit={defaultUnit}
           lockOfficeUnit={lockOfficeUnit}

@@ -3,18 +3,13 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { createVehicle, updateVehicle, type VehicleActionResult } from '@/app/actions/vehicles';
 import { Modal } from '@/components/ui/modal';
-import { RLRDD_OFFICES } from '@/lib/mobility/office-list';
+import { RLRDD_OFFICES, getOfficeUnits } from '@/lib/mobility/office-list';
 import type { VehicleRecord } from '@/lib/mobility/types';
-import {
-  unitsForOffice,
-  withCurrentOption,
-  type PersonnelLookupOptions,
-} from '@/lib/personnel/lookup-options';
+import { withCurrentOption } from '@/lib/personnel/lookup-options';
 
 type VehicleFormModalProps = {
   mode: 'add' | 'edit';
   record?: VehicleRecord | null;
-  lookup: PersonnelLookupOptions;
   defaultOffice?: string | null;
   defaultUnit?: string | null;
   lockOfficeUnit?: boolean;
@@ -80,7 +75,6 @@ function ActionMessage({ result }: { result: VehicleActionResult | null }) {
 export function VehicleFormModal({
   mode,
   record,
-  lookup,
   defaultOffice = '',
   defaultUnit = '',
   lockOfficeUnit = false,
@@ -102,10 +96,12 @@ export function VehicleFormModal({
     () => withCurrentOption(RLRDD_OFFICES, office),
     [office]
   );
+  const mappedUnits = useMemo(() => getOfficeUnits(office), [office]);
   const unitOptions = useMemo(
-    () => unitsForOffice(lookup, office, unit),
-    [lookup, office, unit]
+    () => withCurrentOption(mappedUnits, unit),
+    [mappedUnits, unit]
   );
+  const hasMappedUnits = mappedUnits.length > 0;
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -183,22 +179,34 @@ export function VehicleFormModal({
             <label htmlFor="vehicle-unit" className={labelClass}>
               Unit
             </label>
-            <input
-              id="vehicle-unit"
-              name="unit"
-              type="text"
-              list="vehicle-unit-options"
-              value={unit}
-              onChange={(event) => setUnit(event.target.value)}
-              disabled={lockOfficeUnit}
-              placeholder="Type or select unit..."
-              className={inputClass}
-            />
-            <datalist id="vehicle-unit-options">
-              {unitOptions.map((option) => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
+            {hasMappedUnits ? (
+              <select
+                id="vehicle-unit"
+                name="unit"
+                value={unit}
+                onChange={(event) => setUnit(event.target.value)}
+                disabled={lockOfficeUnit || !office}
+                className={inputClass}
+              >
+                <option value="">{office ? 'Select unit...' : 'Select office first'}</option>
+                {unitOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id="vehicle-unit"
+                name="unit"
+                type="text"
+                value={unit}
+                onChange={(event) => setUnit(event.target.value)}
+                disabled={lockOfficeUnit}
+                placeholder="Type unit..."
+                className={inputClass}
+              />
+            )}
           </div>
         </div>
 
