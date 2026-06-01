@@ -7,6 +7,7 @@ import { deleteVehicle } from '@/app/actions/vehicles';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { VehicleFormModal } from '@/components/mobility/vehicle-form-modal';
 import { vehicleLabel } from '@/lib/mobility/parse-vehicle-form';
+import { EditIcon, PlusIcon, TrashIcon } from '@/components/dashboard/nav-icons';
 import type { VehicleRecord } from '@/lib/mobility/types';
 import type { PersonnelLookupOptions } from '@/lib/personnel/lookup-options';
 
@@ -103,8 +104,9 @@ const navButtonClass =
 const contextMenuClass =
   'fixed z-[200] min-w-[11rem] overflow-hidden rounded-lg border border-[var(--app-border)] bg-[var(--app-popover)] py-1 shadow-xl';
 const contextMenuItemClass =
-  'flex w-full items-center px-3 py-2 text-left text-xs text-[var(--app-text)] transition hover:bg-[var(--app-hover)] disabled:cursor-not-allowed disabled:opacity-40';
+  'flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs text-[var(--app-text)] transition hover:bg-[var(--app-hover)] disabled:cursor-not-allowed disabled:opacity-40';
 const contextMenuDangerClass = `${contextMenuItemClass} text-red-600 dark:text-red-300`;
+const contextMenuIconClass = 'h-4 w-4 shrink-0';
 
 function clampMenuPosition(x: number, y: number, showDelete: boolean) {
   const menuWidth = 176;
@@ -623,6 +625,7 @@ export function VehicleTable({
               role="menu"
             >
               <button type="button" className={contextMenuItemClass} role="menuitem" onClick={openAddForm}>
+                <PlusIcon className={contextMenuIconClass} />
                 Add New Vehicle
               </button>
               <button
@@ -632,6 +635,7 @@ export function VehicleTable({
                 disabled={!contextMenu.record}
                 onClick={() => contextMenu.record && openEditForm(contextMenu.record)}
               >
+                <EditIcon className={contextMenuIconClass} />
                 Edit Vehicle Info
               </button>
               {canDeleteVehicles ? (
@@ -642,6 +646,7 @@ export function VehicleTable({
                   disabled={!contextMenu.record}
                   onClick={() => contextMenu.record && openDeleteConfirm(contextMenu.record)}
                 >
+                  <TrashIcon className={contextMenuIconClass} />
                   Delete Vehicle
                 </button>
               ) : null}
