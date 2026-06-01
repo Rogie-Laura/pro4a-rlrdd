@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation';
+import { canSignInToRlrdd } from '@/lib/auth/access-page';
 import { canAccessRlrdd } from '@/lib/auth/roles';
 import { getSessionUser } from '@/lib/auth/session';
 
 export default async function HomePage() {
   const session = await getSessionUser();
 
-  if (session.userId && canAccessRlrdd(session.user?.role)) {
+  if (session.userId && session.user && canSignInToRlrdd(session.user.access_page) && canAccessRlrdd(session.user)) {
     redirect('/dashboard');
   }
 

@@ -26,6 +26,24 @@ Uses the **same Supabase database** as [pro4a-rprmd](../pro4a-rprmd) with its ow
 
 4. Open http://localhost:3001/login
 
+## Run alongside RPRMD
+
+RPRMD uses port **3000**. RLRDD always uses **3001**.
+
+```bash
+# Terminal 1 — RPRMD
+cd c:\xampp\htdocs\pro4a-rprmd
+npm run dev
+
+# Terminal 2 — RLRDD (must be this folder)
+cd c:\xampp\htdocs\pro4a-rlrdd
+npm run dev
+```
+
+If you see *"Another next dev server is already running"* with `Dir: pro4a-rprmd`, you started dev in the **wrong folder** or tried to start RPRMD twice. Use the RLRDD path above.
+
+To free port 3000: `taskkill /PID 4044 /F` (replace PID from the error).
+
 ## Login access
 
 | Role | Can sign in |

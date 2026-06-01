@@ -1,0 +1,2 @@
+-- Run pro4a-rprmd/sql/019_users_access_page.sql in Supabase SQL Editor.
+-- (Shared database — one migration updates both RPRMD and RLRDD login RPCs.)

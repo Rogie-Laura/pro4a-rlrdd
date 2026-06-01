@@ -20,8 +20,16 @@ export function isRlrddRole(role: string | null | undefined): role is RlrddRole 
   return !!role && RLRDD_ROLES.includes(role as RlrddRole);
 }
 
-export function canAccessRlrdd(role: string | null | undefined): boolean {
-  return isRlrddRole(role);
+export function canAccessRlrdd(user: {
+  role: string | null | undefined;
+  access_page?: string | null;
+}): boolean {
+  const accessPage = user.access_page ?? 'RPRMD';
+  if (accessPage !== 'RLRDD' && accessPage !== 'BOTH') {
+    return false;
+  }
+
+  return isRlrddRole(user.role) || user.role === 'super_admin';
 }
 
 export function canManageUsers(role: string | null | undefined): boolean {
